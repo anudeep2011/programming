@@ -111,27 +111,46 @@ int LCA(int u, int v) {
 }
 
 void query(int u, int v) {
+	/*
+	 * We have a query from u to v, we break it into two queries, u to LCA(u,v) and LCA(u,v) to v
+	 */
 	int lca = LCA(u, v);
-	int ans = query_up(u, lca);
-	int temp = query_up(v, lca);
-	if(temp > ans) ans = temp;
+	int ans = query_up(u, lca); // One part of path
+	int temp = query_up(v, lca); // another part of path
+	if(temp > ans) ans = temp; // take the maximum of both paths
 	printf("%d\n", ans);
 }
 
+/*
+ * change:
+ * We just need to find its position in segment tree and update it
+ */
 void change(int i, int val) {
 	int u = otherEnd[i];
 	update_tree(1, 0, ptr, posInBase[u], val);
 }
 
+/*
+ * Actual HL-Decomposition part
+ * Initially all entries of chainHead[] are set to -1.
+ * So when ever a new chain is started, chain head is correctly assigned.
+ * As we add a new node to chain, we will note its position in the baseArray.
+ * In the first for loop we find the child node which has maximum sub-tree size.
+ * The following if condition is failed for leaf nodes.
+ * When the if condition passes, we expand the chain to special child.
+ * In the second for loop we recursively call the function on all normal nodes.
+ * chainNo++ ensures that we are creating a new chain for each normal child.
+ */
 void HLD(int curNode, int cost, int prev) {
 	if(chainHead[chainNo] == -1) {
-		chainHead[chainNo] = curNode;
+		chainHead[chainNo] = curNode; // Assign chain head
 	}
 	chainInd[curNode] = chainNo;
-	posInBase[curNode] = ptr;
+	posInBase[curNode] = ptr; // Position of this node in baseArray which we will use in Segtree
 	baseArray[ptr++] = cost;
 
 	int sc = -1, ncost;
+	// Loop to find special child
 	for(int i=0; i<adj[curNode].size(); i++) if(adj[curNode][i] != prev) {
 		if(sc == -1 || subsize[sc] < subsize[adj[curNode][i]]) {
 			sc = adj[curNode][i];
@@ -140,17 +159,22 @@ void HLD(int curNode, int cost, int prev) {
 	}
 
 	if(sc != -1) {
+		// Expand the chain
 		HLD(sc, ncost, curNode);
 	}
 
 	for(int i=0; i<adj[curNode].size(); i++) if(adj[curNode][i] != prev) {
 		if(sc != adj[curNode][i]) {
+			// New chains at each normal node
 			chainNo++;
 			HLD(adj[curNode][i], costs[curNode][i], curNode);
 		}
 	}
 }
 
+/*
+ * dfs used to set parent of a node, depth of a node, subtree size of a node
+ */
 void dfs(int cur, int prev, int _depth=0) {
 	pa[0][cur] = prev;
 	depth[cur] = _depth;
@@ -170,6 +194,7 @@ int main() {
 		ptr = 0;
 		int n;
 		scanf("%d", &n);
+		// Cleaning step, new test case
 		for(int i=0; i<n; i++) {
 			adj[i].clear();
 			costs[i].clear();
@@ -190,9 +215,11 @@ int main() {
 		}
 
 		chainNo = 0;
-		dfs(root, -1);
-		HLD(root, -1, -1);
-		make_tree(1, 0, ptr);
+		dfs(root, -1); // We set up subsize, depth and parent for each node
+		HLD(root, -1, -1); // We decomposed the tree and created baseArray
+		make_tree(1, 0, ptr); // We use baseArray and construct the needed segment tree
+
+		// Below Dynamic programming code is for LCA.
 		for(int i=1; i<LN; i++)
 			for(int j=0; j<n; j++)
 				if(pa[i-1][j] != -1)
