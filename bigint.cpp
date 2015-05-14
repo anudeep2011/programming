@@ -162,7 +162,10 @@ struct bigint {
     void operator/=(const bigint &v) {
         *this = *this / v;
     }
- 
+    void operator%=(const bigint &v) {
+        *this = *this % v;
+    }
+
     bool operator<(const bigint &v) const {
         if (sign != v.sign)
             return sign < v.sign;
